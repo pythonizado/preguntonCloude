@@ -1,0 +1,266 @@
+1 Entendido. Vamos a crear la estructura básica de tu aplicación con los cuatro templates que has solicitado. Comenzaremos con la configuración de la base de datos y luego crearemos los templates y la lógica necesaria en Flask.
+
+Primero, creemos el esquema de la base de datos. Crea un archivo llamado schema.sql:
+CREATE TABLE Pregunta (
+    IDPREGUNTA INTEGER PRIMARY KEY AUTOINCREMENT,
+    PREGUNTA VARCHAR(255)
+);
+
+CREATE TABLE Respuesta (
+    IDRESPUESTA INTEGER PRIMARY KEY AUTOINCREMENT,
+    RESPUESTA VARCHAR(100) NOT NULL,
+    IDPREGUNTA INTEGER,
+    CODIGO_GENERADO CHAR(15),
+    FOREIGN KEY (IDPREGUNTA) REFERENCES Pregunta(IDPREGUNTA)
+);
+++++++++++
+2 Crea un archivo init_db.py para inicializar la base de datos:
+import sqlite3
+
+connection = sqlite3.connect('cuestionarioBD.db')
+
+with open('schema.sql') as f:
+    connection.executescript(f.read())
+
+cur = connection.cursor()
+
+# Insertar algunas preguntas de ejemplo
+cur.execute("INSERT INTO Pregunta (PREGUNTA) VALUES (?)", ("¿Cuál es tu color favorito?",))
+cur.execute("INSERT INTO Pregunta (PREGUNTA) VALUES (?)", ("¿Cuál es tu comida favorita?",))
+cur.execute("INSERT INTO Pregunta (PREGUNTA) VALUES (?)", ("¿Cuál es tu película favorita?",))
+
+connection.commit()
+connection.close()
+
+3 Ahora, crea el archivo principal de Flask app.py:
+
+from flask import Flask, render_template, request, redirect, url_for, session
+import sqlite3
+import random
+import string
+
+app = Flask(__name__)
+app.secret_key = 'tu_clave_secreta_aqui'  # Necesario para usar sesiones
+
+def get_db_connection():
+    conn = sqlite3.connect('cuestionarioBD.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def codigo_generar():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=15))
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/pregunta', methods=['GET', 'POST'])
+def pregunta():
+    if request.method == 'POST':
+        guardar_respuesta()
+        
+    conn = get_db_connection()
+    pregunta = conn.execute('SELECT * FROM Pregunta ORDER BY IDPREGUNTA ASC LIMIT 1 OFFSET ?', 
+                            (session.get('pregunta_actual', 0),)).fetchone()
+    conn.close()
+
+    if pregunta:
+        session['pregunta_actual'] = session.get('pregunta_actual', 0) + 1
+        return render_template('pregunta.html', pregunta=pregunta)
+    else:
+        return render_template('pregunta.html', codigo=session.get('codigo_generado'))
+
+def guardar_respuesta():
+    respuesta = request.form['respuesta']
+    id_pregunta = request.form['id_pregunta']
+    codigo = session.get('codigo_generado')
+    
+    conn = get_db_connection()
+    conn.execute('INSERT INTO Respuesta (RESPUESTA, IDPREGUNTA, CODIGO_GENERADO) VALUES (?, ?, ?)',
+                 (respuesta, id_pregunta, codigo))
+    conn.commit()
+    conn.close()
+
+@app.route('/iniciar_cuestionario')
+def iniciar_cuestionario():
+    session['codigo_generado'] = codigo_generar()
+    session['pregunta_actual'] = 0
+    return redirect(url_for('pregunta'))
+
+@app.route('/resultado')
+def resultado():
+    return render_template('resultado.html')
+
+@app.route('/probabilidad', methods=['POST'])
+def probabilidad():
+    codigo1 = request.form['codigo1']
+    codigo2 = request.form['codigo2']
+    # Aquí iría la lógica del método comparar
+    probabilidad = "Método comparar aún no implementado"
+    return render_template('probabilidad.html', probabilidad=probabilidad)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+4 Ahora, crea los templates HTML en la carpeta templates/:
+
+index.html:
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio - Cuestionario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo">
+        <h1>Bienvenido al Cuestionario</h1>
+        <a href="{{ url_for('iniciar_cuestionario') }}" class="btn">Comenzar cuestionario</a>
+        <a href="{{ url_for('resultado') }}" class="btn">Calcular probabilidad</a>
+    </div>
+</body>
+</html>
+
+pregunta.html:
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pregunta - Cuestionario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        {% if pregunta %}
+            <h2>{{ pregunta['PREGUNTA'] }}</h2>
+            <form method="POST">
+                <input type="hidden" name="id_pregunta" value="{{ pregunta['IDPREGUNTA'] }}">
+                <input type="text" name="respuesta" required>
+                <button type="submit">Siguiente pregunta</button>
+            </form>
+        {% else %}
+            <h2>Has completado el cuestionario</h2>
+            <p>Tu código generado es: <span id="codigo">{{ codigo }}</span></p>
+            <button onclick="copiarCodigo()">Copiar</button>
+            <a href="{{ url_for('index') }}" class="btn">Volver al inicio</a>
+        {% endif %}
+    </div>
+    <script>
+        function copiarCodigo() {
+            var codigo = document.getElementById("codigo");
+            navigator.clipboard.writeText(codigo.textContent);
+            alert("Código copiado al portapapeles");
+        }
+    </script>
+</body>
+</html>
+
+
+resultado.html
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultado - Cuestionario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Comparar códigos</h2>
+        <form action="{{ url_for('probabilidad') }}" method="POST">
+            <input type="text" name="codigo1" placeholder="Código 1" required>
+            <input type="text" name="codigo2" placeholder="Código 2" required>
+            <button type="submit">Comparar</button>
+        </form>
+    </div>
+</body>
+</html>
+
+
+probabilidad.html:
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Probabilidad - Cuestionario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Resultado de la comparación</h2>
+        <p>{{ probabilidad }}</p>
+        <a href="{{ url_for('index') }}" class="btn">Volver al inicio</a>
+    </div>
+</body>
+</html>
+
+
+5 Finalmente, crea un archivo CSS básico en static/css/styles.css:
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+
+.container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.logo {
+    max-width: 200px;
+    margin-bottom: 20px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 10px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+
+Asegúrate de tener una imagen de logo en la carpeta static/images/ con el nombre logo.png.
+Para ejecutar la aplicación:
+
+Ejecuta python init_db.py para crear la base de datos.
+Ejecuta python app.py para iniciar el servidor Flask.
+
+Esta estructura básica cumple con tus requisitos. El método comparar aún no está implementado, pero puedes añadirlo en el futuro en la función probabilidad en app.py.

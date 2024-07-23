@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio - Cuestionario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo">
+        <h1>Bienvenido al Cuestionario</h1>
+        <a href="{{ url_for('iniciar_cuestionario') }}" class="btn">Comenzar cuestionario</a>
+        <br>
+        <a href="{{ url_for('resultado') }}" class="btn">Calcular probabilidad</a>
+    </div>
+</body>
+</html>
+

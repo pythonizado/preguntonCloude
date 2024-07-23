@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pregunta - Cuestionario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        {% if pregunta %}
+            <h2>{{ pregunta['PREGUNTA'] }}</h2>
+            <form method="POST">
+                <input type="hidden" name="id_pregunta" value="{{ pregunta['IDPREGUNTA'] }}">
+                <input type="text" name="respuesta" required>
+                <button type="submit">Siguiente pregunta</button>
+            </form>
+        {% else %}
+            <h2>Has completado el cuestionario</h2>
+            <p>Tu código generado es: <span id="codigo">{{ codigo }}</span></p>
+            <button onclick="copiarCodigo()">Copiar</button>
+            <a href="{{ url_for('index') }}" class="btn">Volver al inicio</a>
+        {% endif %}
+    </div>
+    <script>
+        function copiarCodigo() {
+            var codigo = document.getElementById("codigo");
+            navigator.clipboard.writeText(codigo.textContent);
+            alert("Código copiado al portapapeles");
+        }
+    </script>
+</body>
+</html>

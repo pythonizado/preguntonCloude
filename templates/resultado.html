@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultado - Cuestionario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Comparar códigos</h2>
+        <form action="{{ url_for('probabilidad') }}" method="POST">
+            <input type="text" name="codigo1" placeholder="Código 1" required>
+            <input type="text" name="codigo2" placeholder="Código 2" required>
+            <button type="submit">Comparar</button>
+        </form>
+    </div>
+</body>
+</html>
