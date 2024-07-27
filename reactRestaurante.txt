@@ -1,0 +1,206 @@
+
+Bash 
+npx create-react-app restaurant-order-system
+cd restaurant-order-system
+
+
+--------------------------------
+bash 
+npm install react-router-dom axios sqlite3
+
+-------------------------------------
+carpetas
+src/
+  components/
+  pages/
+  services/
+  utils/
+
+  ------------------------------------------
+
+src/pages/Home.js
+jsx
+import React from 'react';
+import { Link } from 'react-router-dom';
+
+function Home() {
+  return (
+    <div>
+      <h1>Bienvenido a nuestro restaurante</h1>
+      <Link to="/order">Hacer un pedido</Link>
+      <Link to="/employee">Área de empleados</Link>
+    </div>
+  );
+}
+
+export default Home;
+
+--------------------------------------------------
+src/pages/OrderPage.js
+jsx
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function OrderPage() {
+  const [order, setOrder] = useState({ dish: '', table: '' });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post('/api/orders', order);
+      alert('Pedido realizado con éxito');
+      setOrder({ dish: '', table: '' });
+    } catch (error) {
+      console.error('Error al realizar el pedido', error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        value={order.dish}
+        onChange={(e) => setOrder({ ...order, dish: e.target.value })}
+        placeholder="Plato"
+        required
+      />
+      <input
+        type="number"
+        value={order.table}
+        onChange={(e) => setOrder({ ...order, table: e.target.value })}
+        placeholder="Número de mesa"
+        required
+      />
+      <button type="submit">Realizar pedido</button>
+    </form>
+  );
+}
+
+export default OrderPage;
+-------------------------------------------------------------
+
+src/pages/EmployeePage.js
+jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function EmployeePage() {
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const response = await axios.get('/api/orders');
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error al obtener pedidos', error);
+    }
+  };
+
+  return (
+    <div>
+      <h2>Pedidos actuales</h2>
+      <ul>
+        {orders.map((order) => (
+          <li key={order.id}>
+            Mesa: {order.table}, Plato: {order.dish}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default EmployeePage;
+
+--------------------------------------------------------
+
+src/App.js
+jsx
+import React from 'react';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import Home from './pages/Home';
+import OrderPage from './pages/OrderPage';
+import EmployeePage from './pages/EmployeePage';
+
+function App() {
+  return (
+    <Router>
+      <Switch>
+        <Route exact path="/" component={Home} />
+        <Route path="/order" component={OrderPage} />
+        <Route path="/employee" component={EmployeePage} />
+      </Switch>
+    </Router>
+  );
+}
+
+export default App;
+
+-----------------------------------------------
+Para la base de datos SQLite y la API, necesitará configurar un servidor backend. Puede usar Express.js para esto. Aquí hay un ejemplo básico:
+
+Configuración del servidor (server.js en la raíz del proyecto):
+
+-------------------------------------------------------------
+
+javascript
+
+const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
+const app = express();
+const port = 3001;
+
+app.use(express.json());
+
+const db = new sqlite3.Database('./restaurant.db', (err) => {
+  if (err) {
+    console.error(err.message);
+  }
+  console.log('Connected to the restaurant database.');
+});
+
+db.run(`CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  dish TEXT NOT NULL,
+  table_number INTEGER NOT NULL
+)`);
+
+app.post('/api/orders', (req, res) => {
+  const { dish, table } = req.body;
+  db.run(`INSERT INTO orders (dish, table_number) VALUES (?, ?)`, [dish, table], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ id: this.lastID });
+  });
+});
+
+app.get('/api/orders', (req, res) => {
+  db.all(`SELECT * FROM orders`, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
+
+--------------------------------------------------------
+
+Para ejecutar este sistema, necesitará iniciar tanto el servidor de React como el servidor Express. Puede usar un paquete como concurrently para ejecutar ambos simultáneamente.
+
+--------------------------------------------------------
+Este es un esquema básico para el sistema que ha solicitado. Necesitará expandirlo con más funcionalidades, mejorar el manejo de errores, añadir autenticación para los empleados, y mejorar el diseño de la interfaz de usuario. También debería considerar usar un ORM como Sequelize para manejar la base de datos de manera más eficiente y segura.
+¿Le gustaría que explique o profundice en alguna parte específica de este código?
+
+
+
+
+
